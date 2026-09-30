@@ -29,9 +29,7 @@ Use the same login in Home Assistant as in the app. Email+password and phone+SMS
 | Heater / Heater temperature | Heater on/off, and target 10.0–30.0 °C in 0.5° steps (the target is remembered while the heater is off) |
 | Humidifier | Slider 0–3, 0 = off |
 | Air intake | Fresh air / Mixed / Recirculation (these also switch the fan on) / Supply air valve (fan off, damper open, as in the app) |
-| AutoNanny, Night mode | Mode switches; turning them off restores the fan speed they overwrote |
-| Night mode from / until | Night window |
-| Time zone | UTC offset in hours for the device clock (the app and remote can't set it; unset means UTC). Kept in sync automatically |
+| AutoNanny, Night mode | Mode switches; turning them off restores the fan speed they overwrote. Night mode drops the fan to speed 1 as soon as it's on (the device has no working night schedule) |
 | CO2, Room temperature, Inlet air temperature, Humidity, Actual fan speed, Water tank empty | Sensors |
 | Fan throttled | On when the breezer runs slower than set for over a minute on its own (e.g. with cold inlet air) |
 | Online | Cloud connectivity |
@@ -45,7 +43,7 @@ Use the same login in Home Assistant as in the app. Email+password and phone+SMS
 - The server answers 200 even for unknown fields.
 - Night and auto mode overwrite `u_fan_speed` and don't restore it when switched off.
 - Night mode takes effect as soon as `u_night` is set (fan to the lowest speed). The device ignores `u_night_start`/`u_night_stop` (firmware 1.9/3.1/2.11), and the cloud doesn't act on them either.
-- The device applies `u_time_zone` from each command it receives and falls back to UTC when a command omits it. The integration therefore sends it with every command, and re-sends it when the device clock (condition `time` vs. the cloud's UTC `created_at`) is on the wrong zone, e.g. after an app command.
+- The device applies `u_time_zone` from each command it receives and falls back to UTC when a command omits it (compare condition `time` with the cloud's UTC `created_at`). Since the night window is ignored, the device clock doesn't affect anything the integration uses.
 
 ## CLI
 

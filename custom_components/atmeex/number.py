@@ -1,9 +1,9 @@
-"""Sliders: fan speed, heater temperature and humidifier stage; time zone setting."""
+"""Sliders: fan speed, heater temperature and humidifier stage."""
 from __future__ import annotations
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -21,7 +21,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             AtmeexFanSpeed(coordinator, dev_id),
             AtmeexHeaterTarget(coordinator, dev_id),
             AtmeexHumidifier(coordinator, dev_id),
-            AtmeexTimeZone(coordinator, dev_id),
         )
     )
 
@@ -109,28 +108,3 @@ class AtmeexHumidifier(AtmeexEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         await self._set(u_hum_stg=int(value))
 
-
-class AtmeexTimeZone(AtmeexEntity, NumberEntity):
-    """UTC offset of the device clock, used for the night mode window.
-
-    Neither the app nor the remote can set it; while it is unset the device runs on UTC.
-    """
-
-    _attr_name = "Time zone"
-    _attr_icon = "mdi:map-clock"
-    _attr_entity_category = EntityCategory.CONFIG
-    _attr_mode = NumberMode.BOX
-    _attr_native_unit_of_measurement = UnitOfTime.HOURS
-    _attr_native_min_value = -12
-    _attr_native_max_value = 14
-    _attr_native_step = 1
-
-    def __init__(self, coordinator, dev_id: int) -> None:
-        super().__init__(coordinator, dev_id, "u_time_zone")
-
-    @property
-    def native_value(self) -> int | None:
-        return self.settings.get("u_time_zone")
-
-    async def async_set_native_value(self, value: float) -> None:
-        await self._set(u_time_zone=int(value))
