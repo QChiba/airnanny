@@ -50,3 +50,7 @@ python3 atmeex.py status       # settings vs. actual condition
 python3 atmeex.py watch [secs] # log changes to watch.log
 python3 atmeex.py get /devices/<id>
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).
