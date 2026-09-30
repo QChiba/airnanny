@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Atmeex AirNanny",
+        "description": "How do you sign in to the Atmeex app?",
+        "menu_options": {
+          "email": "Email and password",
+          "phone": "Phone number and SMS code"
+        }
+      },
+      "email": {
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "phone": {
+        "description": "International format, e.g. +79991234567. An SMS code will be sent.",
+        "data": {
+          "phone": "Phone number"
+        }
+      },
+      "sms": {
+        "description": "Enter the code sent to {phone}.",
+        "data": {
+          "code": "SMS code"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid credentials or code",
+      "invalid_phone": "The Atmeex cloud rejected this phone number",
+      "cannot_connect": "Cannot reach the Atmeex cloud"
+    },
+    "abort": {
+      "already_configured": "This account is already configured",
+      "reauth_successful": "Re-authentication successful",
+      "unique_id_mismatch": "Please sign in with the same account as before"
+    }
+  }
+}

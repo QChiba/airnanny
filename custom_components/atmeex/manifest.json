@@ -1,0 +1,12 @@
+{
+  "domain": "atmeex",
+  "name": "Atmeex AirNanny",
+  "codeowners": [],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/freemandigger/atmeex_hacs",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}
