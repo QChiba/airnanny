@@ -34,17 +34,6 @@ Use the same login in Home Assistant as in the app. Email+password and phone+SMS
 | Fan throttled | On when the breezer runs slower than set for over a minute on its own (e.g. with cold inlet air) |
 | Online | Cloud connectivity |
 
-## API notes
-
-- `GET /devices` lists devices without live condition; `GET /devices/{id}` includes it.
-- `PUT /devices/{id}/params` accepts any subset of: `u_pwr_on`, `u_fan_speed` (0–6 = app 1–7), `u_damp_pos` (0 fresh, 1 mixed, 2 recirculation), `u_temp_room` (°C×10, −1000 = heater off), `u_hum_stg`, `u_auto`, `u_night`, `u_night_start`/`u_night_stop` ("HH:MM"; values written by the device come back as "H:MM", e.g. "8:00"), `u_cool_mode`, `u_time_zone` (hours; can't be reset to null).
-- The app's speeds 1–7 are `u_fan_speed` 0–6. The fan is stopped only when `u_pwr_on` is false.
-- The app's "supply air valve" mode is `u_pwr_on: false` with `u_damp_pos: 0` (the app also sets `u_fan_speed: 0`).
-- The server answers 200 even for unknown fields.
-- Night and auto mode overwrite `u_fan_speed` and don't restore it when switched off.
-- Night mode takes effect as soon as `u_night` is set (fan to the lowest speed). The device ignores `u_night_start`/`u_night_stop` (firmware 1.9/3.1/2.11), and the cloud doesn't act on them either.
-- The device applies `u_time_zone` from each command it receives and falls back to UTC when a command omits it (compare condition `time` with the cloud's UTC `created_at`). Since the night window is ignored, the device clock doesn't affect anything the integration uses.
-
 ## CLI
 
 ```sh
