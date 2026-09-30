@@ -35,10 +35,12 @@ class AtmeexNightTime(AtmeexEntity, TimeEntity):
 
     @property
     def native_value(self) -> time | None:
+        # the device reports hours without a leading zero ("8:00"), which fromisoformat rejects
         v = self.settings.get(self._field)
         try:
-            return time.fromisoformat(v) if v else None
-        except ValueError:
+            hours, minutes = (int(part) for part in v.split(":")[:2])
+            return time(hours, minutes)
+        except (AttributeError, ValueError):
             return None
 
     async def async_set_value(self, value: time) -> None:
