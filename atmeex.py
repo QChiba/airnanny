@@ -90,7 +90,7 @@ def devices():
     return [authed_get(f"/devices/{d['id']}") for d in authed_get("/devices")]
 
 
-def watch(interval=60, logfile=os.path.expanduser("~/develop/airnanny/watch.log")):
+def watch(interval=60, logfile=os.path.join(os.path.dirname(os.path.abspath(__file__)), "watch.log")):
     """Poll forever; log every change of settings (commands) or condition (device state)."""
     import time
     last = {}

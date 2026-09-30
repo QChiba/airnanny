@@ -1,12 +1,13 @@
 {
   "domain": "atmeex",
   "name": "Atmeex AirNanny",
-  "codeowners": [],
+  "codeowners": ["@QChiba"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/freemandigger/atmeex_hacs",
+  "documentation": "https://github.com/QChiba/airnanny",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/QChiba/airnanny/issues",
   "requirements": [],
   "version": "0.1.0"
 }

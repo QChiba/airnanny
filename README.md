@@ -6,14 +6,21 @@ The breezer has no local API: it only keeps a connection to `api.iot.atmeex.com`
 
 ## Home Assistant integration
 
-`custom_components/atmeex` works without HACS. To install, copy it into HA's `custom_components` and restart HA. Then add **Atmeex AirNanny** under Settings → Devices & services and log in with email+password or phone+SMS.
+### Before you start
 
-Deploying to the Synology HA container (the NAS has no SFTP, so `scp` doesn't work):
+The integration only sees devices that are already in your Atmeex cloud account. First install the official **Atmeex** app, log in, and add your breezer there (together with a room, if the app asks for one). Once the device shows up in the app, it's in the Atmeex cloud and the integration will find it.
 
-```sh
-cd custom_components && tar cf - atmeex | ssh synology \
-  'tar xf - -C /volume1/docker/smarthome/homeassistant/config/custom_components && docker restart homeassistant'
-```
+Use the same login in Home Assistant as in the app. Email+password and phone+SMS are separate sign-in methods: signing in by phone with a number the app doesn't know creates a new, empty account.
+
+### Install
+
+`custom_components/atmeex` works without HACS:
+
+1. Copy the `custom_components/atmeex` folder into the `custom_components` folder of your Home Assistant config directory.
+2. Restart Home Assistant.
+3. Go to Settings → Devices & services → Add integration → **Atmeex AirNanny**, and log in with email+password or phone+SMS.
+
+### Entities
 
 | Entity | What it does |
 |---|---|
