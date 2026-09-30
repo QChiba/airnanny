@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -21,6 +22,21 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# the device applies u_time_zone from each command it gets and falls back to UTC when a
+# command lacks it; resend at most this often when its clock is found on the wrong zone
+TZ_RESYNC_SECONDS = 600
+_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _clock_offset_hours(condition: dict) -> int | None:
+    """Device clock offset from UTC: its local "time" vs. the cloud's UTC "created_at"."""
+    try:
+        device = datetime.strptime(condition["time"], _TIME_FORMAT)
+        received = datetime.strptime(condition["created_at"], _TIME_FORMAT)
+    except (KeyError, TypeError, ValueError):
+        return None
+    return round((device - received).total_seconds() / 3600)
 
 
 class AtmeexCoordinator(DataUpdateCoordinator[dict[int, dict]]):
@@ -41,6 +57,7 @@ class AtmeexCoordinator(DataUpdateCoordinator[dict[int, dict]]):
         # damper position while running; powering off closes the damper (like the remote's power button)
         self.running_damper: dict[int, int] = {}
         self._throttled_since: dict[int, float | None] = {}
+        self._tz_resynced: dict[int, float] = {}
 
     def _save_tokens(self, access: str, refresh: str) -> None:
         self.hass.config_entries.async_update_entry(
@@ -57,7 +74,23 @@ class AtmeexCoordinator(DataUpdateCoordinator[dict[int, dict]]):
             raise UpdateFailed(str(err)) from err
         for dev_id, dev in devices.items():
             self._track(dev_id, dev)
+            await self._resync_time_zone(dev_id, dev)
         return devices
+
+    async def _resync_time_zone(self, dev_id: int, dev: dict) -> None:
+        """Commands from the app (or a reboot) put the device clock back on UTC; restore it."""
+        tz = (dev.get("settings") or {}).get("u_time_zone")
+        offset = _clock_offset_hours(dev.get("condition") or {})
+        if tz is None or offset is None or offset == tz or dev.get("online") is False:
+            return
+        if time.monotonic() - self._tz_resynced.get(dev_id, -TZ_RESYNC_SECONDS) < TZ_RESYNC_SECONDS:
+            return
+        self._tz_resynced[dev_id] = time.monotonic()
+        _LOGGER.info("%s clock is on UTC%+d instead of UTC%+d, resending time zone", dev.get("name"), offset, tz)
+        try:
+            await self.api.set_params(dev_id, {"u_time_zone": tz})
+        except AtmeexApiError as err:
+            _LOGGER.warning("Could not resend time zone to %s: %s", dev.get("name"), err)
 
     def _track(self, dev_id: int, dev: dict) -> None:
         s = dev.get("settings") or {}
@@ -84,6 +117,10 @@ class AtmeexCoordinator(DataUpdateCoordinator[dict[int, dict]]):
         return since is not None and time.monotonic() - since >= THROTTLE_GRACE_SECONDS
 
     async def async_set_params(self, dev_id: int, **params) -> None:
+        # without it the device resets its clock to UTC, shifting the night mode window
+        tz = (self.data.get(dev_id, {}).get("settings") or {}).get("u_time_zone")
+        if tz is not None:
+            params.setdefault("u_time_zone", tz)
         try:
             resp = await self.api.set_params(dev_id, params)
         except AtmeexAuthError as err:
