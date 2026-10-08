@@ -9,6 +9,8 @@ CONF_ACCESS_TOKEN = "access_token"
 CONF_REFRESH_TOKEN = "refresh_token"
 
 SCAN_INTERVAL = timedelta(seconds=30)
+# access tokens live 3 hours; refresh this long before they expire
+TOKEN_REFRESH_MARGIN_SECONDS = 300
 
 # u_temp_room value that switches the heater off
 HEATER_OFF = -1000

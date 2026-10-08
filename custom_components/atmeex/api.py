@@ -1,12 +1,16 @@
 """Minimal async client for the Atmeex cloud API."""
 from __future__ import annotations
 
+import asyncio
+import base64
+import json
+import time
 from collections.abc import Callable
 from typing import Any
 
 import aiohttp
 
-from .const import API_BASE
+from .const import API_BASE, TOKEN_REFRESH_MARGIN_SECONDS
 
 HEADERS = {"accept": "application/json", "user-agent": "okhttp/3.14.9"}
 
@@ -17,6 +21,15 @@ class AtmeexApiError(Exception):
 
 class AtmeexAuthError(AtmeexApiError):
     """Credentials or session rejected."""
+
+
+def _token_expiry(token: str) -> float | None:
+    """The access token is a JWT; return its exp claim, or None if it can't be read."""
+    try:
+        payload = token.split(".")[1]
+        return float(json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["exp"])
+    except (IndexError, KeyError, TypeError, ValueError):
+        return None
 
 
 class AtmeexApi:
@@ -31,6 +44,8 @@ class AtmeexApi:
         self.access_token = access_token
         self.refresh_token = refresh_token
         self._on_tokens = on_tokens
+        # refresh tokens are single-use, so concurrent refreshes would invalidate each other
+        self._refresh_lock = asyncio.Lock()
 
     async def _raw(self, method: str, path: str, body: Any = None, token: str | None = None) -> tuple[int, Any]:
         headers = dict(HEADERS)
@@ -56,14 +71,38 @@ class AtmeexApi:
 
     async def _signin(self, body: dict) -> None:
         status, data = await self._raw("POST", "/auth/signin", body)
-        if status >= 400 or not isinstance(data, dict) or "access_token" not in data:
+        # only a 4xx means the credentials or refresh token were rejected; anything else is worth retrying
+        if status >= 500 or status == 429:
+            raise AtmeexApiError(f"sign-in failed: HTTP {status}")
+        if status >= 400:
             raise AtmeexAuthError(f"sign-in rejected: HTTP {status}")
+        if not isinstance(data, dict) or "access_token" not in data:
+            raise AtmeexApiError(f"sign-in returned no token: HTTP {status}")
         self._set_tokens(data)
 
-    async def _call(self, method: str, path: str, body: Any = None) -> Any:
-        status, data = await self._raw(method, path, body, self.access_token)
-        if status == 401:
+    async def _refresh(self, stale_token: str) -> None:
+        """Swap the refresh token for new tokens, unless another call already replaced stale_token."""
+        async with self._refresh_lock:
+            if self.access_token != stale_token:
+                return
             await self._signin({"grant_type": "refresh_token", "refresh_token": self.refresh_token})
+
+    def _expires_soon(self) -> bool:
+        exp = _token_expiry(self.access_token)
+        return exp is not None and exp - time.time() < TOKEN_REFRESH_MARGIN_SECONDS
+
+    async def _call(self, method: str, path: str, body: Any = None) -> Any:
+        if self._expires_soon():
+            try:
+                await self._refresh(self.access_token)
+            except AtmeexAuthError:
+                raise
+            except AtmeexApiError:
+                pass  # the token may still be good for a few minutes; a 401 below retries the refresh
+        token = self.access_token
+        status, data = await self._raw(method, path, body, token)
+        if status == 401:
+            await self._refresh(token)
             status, data = await self._raw(method, path, body, self.access_token)
         if status == 401:
             raise AtmeexAuthError("session rejected after token refresh")
